@@ -21,16 +21,27 @@ variable "vpc-id" {
     description = "Enter required VPC ID"
 }
 
+# Create a VPC
+resource "aws_vpc" "vpc-demo" {
+    cidr_block = "10.0.0.0/16"
+    tags {
+        Name = "vpc-deploy-demo"
+    }
+}
+
+
 # Create production auto-scan nodes
-resource "aws_instance" "compliance-prod" {
+resource "aws_instance" "windows-prod" {
     count = "${var.num-nodes}"
     instance_type = "t2.small"
     ami = "${var.windows-ami}"
         key_name = "${var.aws-key}"
     associate_public_ip_address = true
     security_groups = ["${var.win-sg}"]
+    subnet_id = ["${var.vpc-demo}"]
+
     tags {
-        Name = "${var.chef-user}-prod-web-${count.index +1}"
+        Name = "prod-win-${count.index +1}"
     }
 
     connection {
@@ -43,7 +54,7 @@ resource "aws_instance" "compliance-prod" {
 
     provisioner "chef"  {
         environment = "production"
-        run_list = ["role[client]", "role[audit_win2012_r2]"]
+        run_list = ["role[client]"]
         node_name = "${var.chef-user}-prod-web-${count.index +1}"
         server_url = "${var.chef-server}"
         validation_key = "${file("${var.validation-key}")}"
